@@ -25,7 +25,7 @@ As mentioned earlier only first innings totals and the number of rows (number of
 ## Results:
 
 <p align="center">
-  <img src="https://github.com/Rahulpodi/Finisher-Score---Cricket/blob/master/Results/Consistency.png" width="650"/>
+  <img src="https://github.com/Rahulpodi/Evolution-of-ODI-Scores/blob/master/Results/Evolution%20of%20ODI%20Score.png" width="650"/>
 </p>
 
 From the graph, it could be seen that the two big peaks occuring post 1992 and post 2012 are driven by structural changes like new fielding restriction rules implemented by ICC. The former peak was the result of ICC restricting the number of fielders to two from three in the first 15 overs whereas the remaining 35 overs had 5 fielders outside the circle. One of the player's ODI debut which happend around the same time was Sachin Tendulkar who should have benefited from the same compared to previous greats like Viv Richards. The latter mentioned peak around 2012 was again due to structural change which was eventually even more punishing for the bowlers since in the first powerplay (10 overs) 2 fielders were allowed and in the second and third powerplay three were allowed whereas in the remaining 30 overs only 4 fielders were allowed
