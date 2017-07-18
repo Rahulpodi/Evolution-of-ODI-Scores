@@ -42,7 +42,7 @@ team_totals[,"Year"]<-as.factor(team_totals[,"Year"])
 
 median_score<-team_totals%>%
         group_by(Year)%>%
-        summarise(Avg.Score=median(Only.Score))
+        summarise(Median.Score=median(Only.Score))
 
 mean_score<-team_totals%>%
         group_by(Year)%>%
@@ -53,5 +53,7 @@ count_matches<-team_totals%>%
         summarise(Count=n())
 
 median_score[,"Count"]<-count_matches[match(median_score$Year,count_matches$Year),2]
+mean_score[,"Count"]<-count_matches[match(mean_score$Year,count_matches$Year),2]
 
 write.csv(median_score,"E:/ODI Scores/Results/median_score.csv",row.names = FALSE)
+write.csv(mean_score,"E:/ODI Scores/Results/mean_score.csv",row.names = FALSE)

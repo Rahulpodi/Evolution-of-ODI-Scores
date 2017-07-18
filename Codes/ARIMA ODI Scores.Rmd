@@ -1,0 +1,112 @@
+---
+title: "Time series modeling of ODI scores"
+author: "Rahul.P.R"
+date: "3 July 2017"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+
+# Libraries
+
+library(forecast)
+library(zoo)
+library(xts)
+library(tseries)
+
+# Reading data
+
+median_score<-read.csv("E:/ODI Scores/Results/median_score.csv",stringsAsFactors = FALSE)
+mean_score<-read.csv("E:/ODI Scores/Results/mean_score.csv",stringsAsFactors = FALSE)
+
+```
+
+The average of all the matches conducted in a particular year was used to obtain the mean and median for the same. The trend was plotted for median score and it was understood that structural changes initiated by ICC have majorly pushed the median scores over the years. 
+
+```{r,echo=FALSE}
+
+# removing years where there were less than 20 matches played
+
+mean_score_20<-mean_score[which(mean_score$Count>=20),]
+median_score_20<-median_score[which(median_score$Count>=20),]
+
+# Removing 2017
+
+mean_score_20<-mean_score_20[-nrow(mean_score_20),]
+median_score_20<-median_score_20[-nrow(median_score_20),]
+
+# Converting it into a zoo/xts object i.e., a time series object - Converting into date first
+
+# mean_score_20$Year<-as.ts(mean_score_20$Year)
+
+data_for_acf_pacf<-xts(mean_score_20[,2],order.by = as.Date(as.character(mean_score_20$Year),format="%Y"))
+
+```
+
+In the initial data there were `r nrow(mean_score)` years considered however now for time series modeling only `r nrow(mean_score_20)` years are considered eventually leaving out years where the number of matches played were less than 20. The years are `r c(mean_score[which(mean_score$Count<20),"Year"])` . 2017, the current year was removed and lets try predicting the same!
+
+Now, lets understand the time series. Before that its wise to understand if the time series is stationary/non-stationary. ARIMA(Auto regression integrated moving average) model is applicable only on a stationary series. To understand the data series in picture and decide on stationary/non stationary lets do both descriptive as well as statistic analyss
+
+(i) Descriptive
+
+A stationary series typically doesnt have the mean across the years increasing i.e., in simple terms there would be no visible trend.
+
+```{r,echo=FALSE}
+plot(mean_score_20$Year,mean_score_20$Avg.Score,type = 'l',main = "Trend of average ODI scores",xlab = "Year",ylab = "Mean Score",col=3,pch=4)
+```
+
+The year-on-year plot above clearly shows that there is a considerable increase in the average score over the years (requires a diff function) and also variation over time which will eventually require a log function i.e., to neglect the effect of trend and variation and making it stationary. Though seasonality would be present in the data it is anyways taken care in the ARIMA model itself
+
+(ii) Augemented Dickey Fuller test
+
+Though there is some indecisiveness/statistical evidence with the descriptive plots the above named test is conclusive. Initially, running the test directly on the raw data without any transformation and then applying the same post-transformation or stationarizing the time series using log and diff
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+
+# To start with doing the test on the data without any stationarizing operation performed
+adf.test(data_for_acf_pacf,alternative="stationary", k=0)
+```
+
+The time series considered here is already stationary without transoframtion or operation such as log/diff since the the null hypothesis is rejected. The agumented test statistic is typically a negative number, the more the negative it is the stronger the rejection of null hypothesis. Now, with diff operation alone i.e., removing the trend component, the test works as
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+
+# Since from the plots we saw that there was a trend component present we use diff to avoid that component and make the series stationary
+
+adf.test(diff(data_for_acf_pacf)[-which(is.na(diff(data_for_acf_pacf)))],alternative="stationary", k=0)
+```
+
+Now, the test statistic has become more negative as seen above i.e., decreasing from -5.7495 to -9.7899 and now the rejection of null hypothesis is even stronger. Since variation was witnessed we are incorporating the log function as well and now the test statistic looks like
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+
+# Though there is very little variance along the time series, if we take log to agument that effect the Dickey fuller test looks like
+
+adf.test(diff(log(data_for_acf_pacf))[-which(is.na(diff(log(data_for_acf_pacf))))],alternative="stationary", k=0)
+```
+
+The value decrease even more to -9.9682 from -9.7899. Though there is no significant decrease as observed earlier we still incorporate the same to compeletely staionarize since variation along the time series was visible from the descriptive plots
+
+The series now is stationary enough to do any kind of time series modeling. Lets find the parameters for the ARIMA model using ACF (Auto Correlation function) and PACF (Partial correlation function)
+
+```{r,echo=FALSE,warning=FALSE}
+acf(diff(log(data_for_acf_pacf))[-which(is.na(diff(log(data_for_acf_pacf))))],ylab="Lag",xlab="ACF",main="Auto Correlation Function")
+```
+
+In ACF curve it cuts off the blue dotted line at 2 and hence the value of **p** is 2 i.e., the arima model would require two MA coeffecients MA(2). Now, to the PACF curve to understand the number of auto regression components
+
+```{r,echo=FALSE,warning=FALSE}
+pacf(diff(log(data_for_acf_pacf))[-which(is.na(diff(log(data_for_acf_pacf))))],ylab="Lag",xlab="PACF",main="Partial Correlation Function")
+```
+
+The PACF curve cuts off in the first value and hence the value of **q** or the number of regression components required for the ARIMA model is 1 i.e., it is a AR(1) model. Since the series was transformed to stationary using diff the value of **d** is 1. The parameters (p,d,q), where p is the number of auto regressive coefficients, d is the degree of differencing, q is the number of moving average coefficients which in this cases takes the form (2,1,1).Since difference is incorporated into the parameters already in the form of d we fit the model using the only remaining log transformation. Now predicting the next two years
+
+```{r,echo=FALSE}
+fit <- arima(log(data_for_acf_pacf), c(2, 1, 1),seasonal = list(order = c(2, 1, 1),period=10))
+pred <- predict(fit, n.ahead = 10)
+plot(c(coredata(data_for_acf_pacf),2.718^pred$pred), col = c(rep("black" ,length(coredata(data_for_acf_pacf))), rep("red" ,length(pred$pred))),main = "10 years avg.score prediction",xlab = "Year",ylab ="Avg.Score",type = 'o')
+```
+
+The accuracy of the model however could be tested by predicting for 2016 by considering data only upto 2015. Also, model diagnostics is important and the same would be coverd in detail in the preceding article/blog
